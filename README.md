@@ -1,29 +1,38 @@
 # 🛰️ TARS-9 Sentinel – Mission Horizon
 
-**ATEC’25 CyberQuest Project**  
-Autonomous AI-driven cyber defense system for interstellar missions.
+**ATEC’25 CyberQuest Project** — Autonomous AI-driven cyber defense for interstellar missions.
 
 ## Overview
-TARS-9 Sentinel monitors spacecraft telemetry in real time to detect and respond to
-cyber anomalies in AI, communication, propulsion, and life-support systems.
-It logs every event to an immutable blockchain-inspired ledger and visualizes
-system integrity through an interactive Mission Control Dashboard.
+TARS-9 Sentinel monitors spacecraft telemetry to detect cyber anomalies across AI, comms, propulsion, and life-support. It writes events to an immutable hash-chain log and visualizes system health on a live, space-themed dashboard.
 
 ## Features
 - Real-time anomaly detection  
 - Immutable hash-chain log  
 - Automated response protocol  
-- Flask dashboard with animated space theme  
+- Flask dashboard (animated UI)
 
-## Run locally
+## Prerequisites
+- Python 3.11+ (recommended)
+
+## Setup
 ```bash
-# Clone repo
-git clone https://github.com/<your-username>/tars9-sentinel.git
-cd tars9-sentinel
+# clone
+git clone https://github.com/mhamdiamiin/ATEC25.git
+cd ATEC25
 
-# Install dependencies
+# create & activate venv (Windows PowerShell)
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+# macOS/Linux:
+# python3 -m venv .venv && source .venv/bin/activate
+
+# install deps
 pip install -r requirements.txt
 
-# Start the dashboard
-cd app
-python app.py
+#run 
+# 1) Generate fresh anomalies + immutable log
+python ./src/run.py
+
+# 2) Launch the dashboard
+python ./app/app.py
+# open http://127.0.0.1:5000
