@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TARS-9 Sentinel – Mission Control</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+<!-- Animated space background -->
+<div class="space-bg">
+  <div class="nebula"></div>
+  <div class="planet"></div>
+  <div class="stars"></div>
+</div>
+
+<div class="container py-4 text-light">
+  <!-- Header -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+    <div>
+      <h1 class="fw-bold text-glow mb-0">🛰️ TARS-9 Sentinel</h1>
+      <div class="text-secondary">HORIZON-1 Cyber Defense Mission Control</div>
+    </div>
+    <div class="text-end">
+      <div id="missionClock" class="small text-secondary"></div>
+      <span id="lastAnomaly" class="badge bg-info text-dark mt-1">Last anomaly: —</span>
+      <button id="regenBtn" class="btn btn-outline-info btn-sm ms-2">Regenerate Anomalies</button>
+    </div>
+  </div>
+
+  <!-- Critical banner -->
+  <div id="criticalBanner" class="alert alert-danger d-none glow-red" role="alert">
+    🚨 <strong>CRITICAL ALERT:</strong> Elevated anomaly rate detected.
+  </div>
+
+  <!-- Quick metrics -->
+  <div class="row g-3 mb-3">
+    <div class="col-12 col-md-4">
+      <div class="metric card-dark p-3">
+        <div class="label">Total Anomalies</div>
+        <div class="value" id="mTotal">0</div>
+      </div>
+    </div>
+    <div class="col-12 col-md-4">
+      <div class="metric card-dark p-3">
+        <div class="label">Data Integrity</div>
+        <div class="value"><span id="mIntegrity">100.0</span>%</div>
+      </div>
+    </div>
+    <div class="col-12 col-md-4">
+      <div class="metric card-dark p-3">
+        <div class="label">Status</div>
+        <div class="value" id="mStatus">Nominal</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Compact animated status grid (no charts) -->
+  <div id="statusGrid" class="row g-3 justify-content-center"></div>
+
+  <hr class="my-4 border-secondary">
+
+  <h3 class="text-glow mb-3">⚠️ Live Anomalies Feed</h3>
+  <div id="anomalyTable" class="table-responsive text-light"></div>
+
+  <hr class="my-4 border-secondary">
+
+  <h3 class="text-glow mb-3">🔐 Immutable Log (Latest)</h3>
+  <div id="logFeed"></div>
+</div>
+
+<script>
+const MODULES = ["AI_NAV","AI_LIFE","COMMS_U1","COMMS_U2","PROP_CTRL"];
+
+// cache-busting helper to avoid stale JSON
+function jget(url){ return $.getJSON(url + (url.includes('?')?'&':'?') + 't=' + Date.now()); }
+
+function tickClock(){
+  const now = new Date();
+  document.getElementById("missionClock").innerText =
+    "Mission Time (UTC): " + now.toISOString().slice(0,19).replace('T',' ');
+}
+setInterval(tickClock, 1000); tickClock();
+
+function fetchAll(){
+  jget("/data/metrics").then(metrics => {
+    renderMetrics(metrics);
+    renderBanner(metrics);
+
+    jget("/data/anomalies").then(anomalies => {
+      jget("/data/log").then(logs => {
+        renderStatus(anomalies, metrics);
+        renderAnomalies(anomalies);
+        renderLogs(logs);
+        updateLastAnomaly(anomalies);
+      });
+    });
+  });
+}
+
+function renderMetrics(m){
+  $("#mTotal").text(m.total_anomalies);
+  $("#mIntegrity").text(Number(m.integrity).toFixed(1));
+  $("#mStatus").text(m.critical ? "Critical" : "Nominal");
+}
+
+function renderBanner(m){
+  const b = $("#criticalBanner");
+  if(m.critical) b.removeClass("d-none"); else b.addClass("d-none");
+}
+
+function updateLastAnomaly(anoms){
+  $("#lastAnomaly").text(anoms.length ? ("Last anomaly: " + anoms[anoms.length-1].timestamp) : "Last anomaly: —");
+}
+
+function statusCard(module, hasIssue, severity){
+  const pulse = hasIssue ? "pulse-red" : "pulse-green";
+  const state = hasIssue ? "⚠️ ANOMALY" : "✓ NOMINAL";
+  const pct = Math.min(100, Math.round((severity/5)*100));
+  return `
+    <div class="col-6 col-md-4 col-lg-2">
+      <div class="status-card ${pulse} card-dark text-center">
+        <div class="module-name">${module}</div>
+        <div class="status-text">${state}</div>
+        <div class="progress slim mx-2 mt-1">
+          <div class="progress-bar ${hasIssue ? 'bg-danger' : 'bg-success'}"
+               role="progressbar" style="width:${pct}%"
+               aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"></div>
+        </div>
+        <div class="tiny text-muted mt-1">recent alerts: ${severity}</div>
+      </div>
+    </div>`;
+}
+
+function renderStatus(anoms, metrics){
+  const grid = $("#statusGrid");
+  grid.empty();
+  const per = metrics.per_module_recent || {};
+  MODULES.forEach(m => {
+    const hasIssue = anoms.some(a => a.module === m);
+    const sev = per[m] || 0;
+    grid.append(statusCard(m, hasIssue, sev));
+  });
+}
+
+function renderAnomalies(anoms){
+  let html = "<table class='table table-dark table-striped align-middle'><thead><tr><th>Timestamp</th><th>Module</th><th>Flags</th><th>Latency</th><th>Loss</th></tr></thead><tbody>";
+  anoms.slice(-12).reverse().forEach(a=>{
+    html += `<tr>
+      <td>${a.timestamp}</td>
+      <td>${a.module}</td>
+      <td>${a.flags.map(f=>`<span class='badge bg-warning text-dark me-1'>${f}</span>`).join("")}</td>
+      <td>${a.latency_ms} ms</td>
+      <td>${a.packet_loss}</td>
+    </tr>`;
+  });
+  html += "</tbody></table>";
+  $("#anomalyTable").html(html);
+}
+
+function renderLogs(logs){
+  let html="";
+  logs.slice(-8).reverse().forEach(b=>{
+    let p=b.payload;
+    html+=`<div class="log-entry card-dark">
+      <strong>${p.event}</strong> ${p.module?`<span class='text-warning'>${p.module}</span>`:""}
+      ${p.flags? p.flags.map(f=>`<span class='badge bg-warning text-dark ms-1'>${f}</span>`).join("") : ""}
+      ${p.response? "<br>Response: "+p.response.map(r=>`<span class='badge bg-info text-dark ms-1'>${r}</span>`).join("") : ""}
+      <code class="small text-muted float-end">hash: ${b.hash.slice(0,16)}…</code>
+    </div>`;
+  });
+  $("#logFeed").html(html);
+}
+
+// Regenerate button
+$("#regenBtn").on("click", function(){
+  $("#regenBtn").prop("disabled", true).text("Regenerating…");
+  fetch("/admin/regen", {method: "POST"})
+    .then(r => r.json())
+    .then(_ => fetchAll())
+    .finally(() => setTimeout(()=> {
+      $("#regenBtn").prop("disabled", false).text("Regenerate Anomalies");
+    }, 1200));
+});
+
+// initial + refresh
+fetchAll();
+setInterval(fetchAll, 5000);
+</script>
+</body>
+</html>

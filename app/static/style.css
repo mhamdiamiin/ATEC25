@@ -1,0 +1,61 @@
+/* ✨ Animated space background (subtle) */
+body, html { height: 100%; background: black; color: white; overflow-x: hidden; }
+
+.space-bg { position: fixed; inset: 0; z-index: -1; overflow: hidden; }
+.space-bg:after { /* parallax stars */
+  content: ""; position: absolute; inset: 0;
+  background-image: url('https://www.transparenttextures.com/patterns/stardust.png');
+  opacity: .22; animation: drift 120s linear infinite;
+}
+@keyframes drift { from { background-position: 0 0 } to { background-position: 8000px 4000px } }
+
+.space-bg .nebula {
+  position: absolute; top: 10%; left: 5%; width: 45vmax; height: 45vmax;
+  background: radial-gradient(circle, rgba(0,123,255,0.10), rgba(0,0,0,0) 60%),
+              radial-gradient(circle at 70% 30%, rgba(0,255,204,0.07), rgba(0,0,0,0) 60%),
+              radial-gradient(circle at 30% 70%, rgba(255,0,128,0.06), rgba(0,0,0,0) 60%);
+  filter: blur(3px); animation: breathe 10s ease-in-out infinite;
+}
+@keyframes breathe { 0%,100% { transform: scale(1); opacity:.9 } 50% { transform: scale(1.03); opacity:1 } }
+
+.space-bg .planet {
+  position: absolute; right: 6%; top: 12%; width: 220px; height: 220px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #1b90ff 0%, #0a3e6e 60%, #021424 100%);
+  box-shadow: 0 0 40px rgba(27,144,255,.25);
+}
+
+.text-glow { text-shadow: 0 0 10px #00eaff, 0 0 20px #00eaff; }
+
+/* Cards / containers */
+.card-dark {
+  background: rgba(0,0,0,0.55);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+}
+
+/* 🚨 Status cards — compact with animated glow */
+.status-card {
+  height: 150px;
+  display: flex; flex-direction: column; justify-content: center; align-items: center;
+  padding: 14px; box-shadow: 0 0 8px rgba(0,0,0,.4);
+}
+.module-name { font-size: 1.05rem; font-weight: 700; letter-spacing: .5px; }
+.status-text { font-size: .9rem; color: #cfd8e3; margin-bottom: 6px; }
+
+.pulse-green { animation: pulseGreen 2s infinite; }
+@keyframes pulseGreen { 0%,100% { box-shadow: 0 0 6px #00ff88; } 50% { box-shadow: 0 0 26px #00ff88; } }
+.pulse-red   { animation: pulseRed 1.5s infinite; }
+@keyframes pulseRed   { 0%,100% { box-shadow: 0 0 6px #ff4d4d; } 50% { box-shadow: 0 0 28px #ff0000; } }
+
+/* Slim severity bar */
+.progress.slim { height: 6px; background: rgba(255,255,255,0.08); }
+
+/* Metrics */
+.metric .label { color: #9fb3c8; font-size: .9rem; }
+.metric .value { font-size: 1.6rem; font-weight: 700; }
+
+/* 🔐 Logs */
+.log-entry { border-left: 3px solid #00eaff; margin-bottom: 10px; padding: 10px; border-radius: 8px; }
+
+/* Critical banner glow */
+.glow-red { box-shadow: 0 0 18px rgba(255,0,0,.35); }
